@@ -6,7 +6,7 @@
     "type": "offline"
   },
   "server": {
-    "ip": "orca-axolotl-37-53d5ab.orc.host",
+    "ip": "orca-seal-52-64d2b0.orc.host",
     "port": 25565,
     "version": "1.21.1",
     "try-creative": false
