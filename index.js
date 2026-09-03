@@ -34,14 +34,17 @@ function createBotInstance() {
     version: config.server.version,
     auth: config["bot-account"].type,
     brand: "vanilla",
-    respawn: true // Native client indicator to trigger a core life check
+    respawn: true,
+    // --- FIX FOR 1.21 FABRIC PROTOCOL CRASH ---
+    // Forces the physics engine to stay completely frozen during configuration
+    physicsEnabled: false 
   });
 
   bot.loadPlugin(pathfinder);
 
   // --- MOD REJECTION HANDSHAKE FAKER ---
   bot.once('login', () => {
-    console.log(`[Bot] Initial login connection succeeded.`);
+    console.log(`[Bot] Initial login network handshake established.`);
 
     const client = bot._client;
     client.on('custom_payload', (packet) => {
@@ -50,47 +53,21 @@ function createBotInstance() {
           channel: packet.channel,
           data: Buffer.alloc(0)
         });
-        console.log(`[Bypass] Successfully faked channel validation: ${packet.channel}`);
+        console.log(`[Bypass] Successfully bypassed channel sync: ${packet.channel}`);
       }
     });
   });
 
-  // --- CRITICAL AUTO RESPAWN PACKET RECOVERY ---
-  bot.on('death', () => {
-    console.log(`[Alert] Slobot00 died instantly on spawn! Sending absolute respawn packets...`);
-    
-    // Fallback Method 1: Trigger the official programmatic API trigger
-    setTimeout(() => {
-      try {
-        if (bot) {
-          bot.respawn();
-          console.log(`[Recovery] API respawn packet sent.`);
-        }
-      } catch (e) {
-        console.log(`[Error] Core API respawn failed, using network buffer instead.`);
-      }
-    }, 500);
-
-    // Fallback Method 2: Fire direct client socket data if internal API state gets locked
-    setTimeout(() => {
-      try {
-        if (bot && bot._client) {
-          bot._client.write('client_command', { actionId: 0 });
-          console.log(`[Recovery] Direct socket network respawn event packet injected.`);
-        }
-      } catch (err) {
-        console.error(`[Fatal Recovery Error] Cannot inject respawn packet: ${err.message}`);
-      }
-    }, 1000);
-  });
-
+  // --- SAFE AWAKENING (TURNS ON PHYSICS SAFELY AFTER SPAWN) ---
   bot.on('spawn', () => {
-    console.log(`[Bot] Slobot00 has successfully spawned in the world!`);
+    console.log(`[Bot] Slobot00 has successfully materialized inside world chunks.`);
+    
+    // Now that the configuration phase is safe, we wake up gravity and tracking maps safely
+    bot.physicsEnabled = true; 
     
     bot.clearControlStates();
     bot.setControlState('sneak', true); 
     
-    // Send safe chat updates if configured
     setTimeout(() => {
       if (bot && bot.entity) {
         bot.setControlState('sneak', false);
@@ -102,10 +79,17 @@ function createBotInstance() {
     startMovementRoutine();
   });
 
+  bot.on('death', () => {
+    console.log(`[Alert] Death event recorded. Resolving revival sequences...`);
+    setTimeout(() => {
+      if (bot) bot.respawn();
+    }, 1000);
+  });
+
   bot.on('end', (reason) => {
     console.log(`[Engine] Bot disconnected. Reason: ${reason}`);
     console.log(`[Engine] Scheduling auto-reconnect window...`);
-    setTimeout(createBotInstance, 10000); // 10 seconds delay prevents IP pool spam kicks
+    setTimeout(createBotInstance, 10000); 
   });
 
   bot.on('error', (err) => {
@@ -118,7 +102,7 @@ function startMovementRoutine() {
   if (movementInterval) clearInterval(movementInterval);
 
   movementInterval = setInterval(() => {
-    if (!bot || !bot.entity) return;
+    if (!bot || !bot.entity || !bot.physicsEnabled) return;
     
     bot.setControlState('jump', true);
     setTimeout(() => bot.setControlState('jump', false), 400);
