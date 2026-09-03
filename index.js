@@ -32,9 +32,10 @@ function createBotInstance() {
     port: config.server.port,
     username: config["bot-account"].username,
     version: config.server.version,
-    auth: config["bot-account"].type
+    auth: config["bot-account"].type,
+    brand: "vanilla"
   });
-
+  
   bot.loadPlugin(pathfinder);
 
   // --- MOD REJECTION HANDSHAKE FAKER ---
